@@ -161,6 +161,7 @@ my %opts = (
     },
     PREREQ_PM => {
         'Carp' => '0',
+        'enum' => '0',
         'Exporter' => '0',
         'Getargs::Mixed' => '0.000005',
         'IO::Handle' => '0',

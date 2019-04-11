@@ -54,6 +54,9 @@ in L<IO::Handle::Util>.
 
 =cut
 
+# States of the parser
+use enum qw(:P_ WAITING COLLECTING);
+
 sub extract {
     my %args = parameters([qw(source)], @_);
 
@@ -67,9 +70,36 @@ sub extract {
     $contents =~ s/\h+_\n//g;
     $fh = io_from_any(\$contents);
 
+    # Parse
+    my @retval;
+    my $state = P_WAITING;
+    my $comment;
+
     while(my $line = <$fh>) {
-        print "$.\t$line\n";
+        my $have_doc_comment = ($line =~ /^\h*'''/);
+        print "$.\t$line";
+        if($state == P_WAITING && $have_doc_comment) {
+            $line =~ s/^\h*'''\h*//;
+            $comment = $line;
+            $state = P_COLLECTING;
+
+        } elsif($state == P_COLLECTING && $have_doc_comment) {
+            $line =~ s/^\h*'''\h*//;
+            $comment .= $line;
+
+        } elsif($state == P_COLLECTING && !$have_doc_comment) {
+            # Skip blank lines
+            while(defined $line && $line !~ /\S/) {
+                $line = <$fh>;
+            }
+            chomp $line;
+            chomp $comment;
+            push @retval, {$line => $comment};
+            $state = P_WAITING;
+        }
     }
+
+    return \@retval;
 } #extract
 
 1; # End of Parser::VBA::DocComment
